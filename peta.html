@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Peta NDVI, NDBI, UHI</title>
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+
+  <style>
+    #map {
+      height: 100vh;
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+  <script>
+    const map = L.map('map').setView([-6.24, 106.99], 11); // Fokus ke Bekasi
+
+    // Base map
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Fungsi klasifikasi warna
+    function getColorNDVI(val) {
+      return val > 0.5 ? '#006400' :
+             val > 0.2 ? '#7FFF00' :
+             val > 0   ? '#ADFF2F' :
+             val > -0.2 ? '#FFD700' :
+             '#FF0000';
+    }
+
+    function getColorNDBI(val) {
+      return val > 0.4 ? '#8B0000' :
+             val > 0.2 ? '#FF4500' :
+             val > 0   ? '#FFA500' :
+             val > -0.2 ? '#FFFF00' :
+             '#ADFF2F';
+    }
+
+    function getColorUHI(val) {
+      return val > 35 ? '#800026' :
+             val > 33 ? '#BD0026' :
+             val > 31 ? '#E31A1C' :
+             val > 29 ? '#FC4E2A' :
+             val > 27 ? '#FD8D3C' :
+             val > 25 ? '#FEB24C' :
+             val > 23 ? '#FED976' :
+             '#FFEDA0';
+    }
+
+    // Buat layer kosong
+    let ndviLayer, ndbiLayer, uhiLayer;
+
+    // Load GeoJSON
+    fetch('Bekasi_NDVI_NDBI_UHI.geojson')
+      .then(response => response.json())
+      .then(data => {
+        ndviLayer = L.geoJSON(data, {
+          style: feature => ({
+            color: getColorNDVI(feature.properties.NDVI),
+            weight: 1,
+            fillOpacity: 0.6
+          }),
+          onEachFeature: (feature, layer) => {
+            layer.bindPopup(`NDVI: ${feature.properties.NDVI}`);
+          }
+        });
+
+        ndbiLayer = L.geoJSON(data, {
+          style: feature => ({
+            color: getColorNDBI(feature.properties.NDBI),
+            weight: 1,
+            fillOpacity: 0.6
+          }),
+          onEachFeature: (feature, layer) => {
+            layer.bindPopup(`NDBI: ${feature.properties.NDBI}`);
+          }
+        });
+
+        uhiLayer = L.geoJSON(data, {
+          style: feature => ({
+            color: getColorUHI(feature.properties.UHI),
+            weight: 1,
+            fillOpacity: 0.6
+          }),
+          onEachFeature: (feature, layer) => {
+            layer.bindPopup(`UHI: ${feature.properties.UHI}°C`);
+          }
+        });
+
+        // Tambahkan default layer
+        ndviLayer.addTo(map);
+
+        // Layer control
+        const overlayMaps = {
+          "NDVI (Vegetasi)": ndviLayer,
+          "NDBI (Permukaan Terbangun)": ndbiLayer,
+          "UHI (Urban Heat Island)": uhiLayer
+        };
+
+        L.control.layers(null, overlayMaps, {collapsed: false}).addTo(map);
+      })
+      .catch(err => console.error("Gagal memuat GeoJSON:", err));
+  </script>
+</body>
+</html>
